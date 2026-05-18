@@ -285,7 +285,7 @@ async function configure(config) {
     ? { ...defaultMarkedOptions, ...config.marked }
     : defaultMarkedOptions
 
-  config.layout = config.layout || 'default'
+  config.layout = config.layout || 'parallel'
   if (config.layout.match(/^[a-zA-Z0-9]+$/)) {
     config.layout = path.join(__dirname, 'layouts', config.layout)
   }
