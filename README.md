@@ -89,6 +89,7 @@ import { globby } from 'globby'
 import fs from 'fs-extra'
 import { marked, Marked } from 'marked'
 import { gfmHeadingId } from 'marked-gfm-heading-id'
+import { markedSmartypants } from 'marked-smartypants'
 import { program } from 'commander'
 import { createHighlighter } from 'shiki'
 
@@ -121,7 +122,7 @@ By default, `marked` is run with very basic options (basically, just turning
 `smartypants` on). Users can add more options, but this is the starting point
 
 ```javascript
-const defaultMarkedOptions = {}
+const defaultMarkedOptions = { smartypants: true }
 
 ```
 
@@ -920,6 +921,10 @@ async function formatAsHtml(source, sections, config = {}) {
   /* In modern marked, we use extensions for highlighting */
   const localMarked = new Marked()
   localMarked.use(gfmHeadingId())
+
+  if (config.marked?.smartypants) {
+    localMarked.use(markedSmartypants())
+  }
 
   /* Custom renderer for code blocks in markdown */
   /* Code might happen within the markdown documentation as well! If that */
