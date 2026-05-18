@@ -5,9 +5,12 @@ import promisePlugin from 'eslint-plugin-promise'
 import importPlugin from 'eslint-plugin-import'
 
 export default [
+  {
+    ignores: ['testingInput/**']
+  },
   js.configs.recommended,
   {
-    files: ['**/*.js'],
+    files: ['**/*.js', 'bin/docco'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -23,13 +26,27 @@ export default [
       import: importPlugin
     },
     rules: {
-      'indent': ['error', 2, { 'ignoreComments': true }],
+      indent: ['error', 2, { ignoreComments: true }],
       'no-var': 'error',
       'require-atomic-updates': 'off',
       'brace-style': 'off',
-      'new-cap': ['error', { 'capIsNewExceptions': ['Polymer', 'LabelsMixin', 'NativeReflectorMixin', 'FormElementMixin', 'StyleableMixin', 'InputMixin', 'ThemeableMixin', 'AddHasValueAttributeMixin'] }],
-      'semi': ['error', 'never'],
-      'quotes': ['error', 'single']
+      'new-cap': [
+        'error',
+        {
+          capIsNewExceptions: [
+            'Polymer',
+            'LabelsMixin',
+            'NativeReflectorMixin',
+            'FormElementMixin',
+            'StyleableMixin',
+            'InputMixin',
+            'ThemeableMixin',
+            'AddHasValueAttributeMixin'
+          ]
+        }
+      ],
+      semi: ['error', 'never'],
+      quotes: ['error', 'single']
     }
   }
 ]
