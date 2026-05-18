@@ -48,6 +48,11 @@
   "bin": {
     "docco": "./bin/docco"
   },
+  "files": [
+    "./bin",
+    "./layouts",
+    "./docco.js"
+  ],
   "publishConfig": {
     "access": "public"
   }
