@@ -19,7 +19,7 @@
   "license": "GPL3",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jccr/docco-next"
+    "url": "git+https://github.com/jccr/docco-next"
   },
   "engines": {
     "node": ">= 18.0"
@@ -55,6 +55,7 @@
     "./docco.js"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   }
 }
