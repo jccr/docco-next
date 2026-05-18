@@ -19,7 +19,7 @@
   "license": "GPL3",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mobily-enterprises/docco-next"
+    "url": "https://github.com/jccr/docco-next"
   },
   "engines": {
     "node": ">= 18.0"
