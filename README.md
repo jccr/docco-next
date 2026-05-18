@@ -766,7 +766,7 @@ function parse(source, lines, config = {}) {
  * * `docco-render` -- a custom transformer that ensures the output matches
  *   Docco's specific layout requirements (background, line numbers, line IDs).
  */
-async function codeToHtml(highlighter, code, language, lineNumber, fg) {
+async function codeToHtml(highlighter, code, language, lineNumber) {
   if (!code.trim()) {
     return ''
   }
@@ -900,9 +900,6 @@ async function formatAsHtml(source, sections, config = {}) {
     ] // Add more as needed, or dynamic
   })
 
-  const theme = highlighter.getTheme(config.shikiTheme || 'min-light')
-  const fg = theme.fg
-
   /* [Markdown](https://github.com/markedjs/marked) and Shiki */
   /* In modern marked, we use extensions for highlighting */
   const localMarked = new Marked()
@@ -937,8 +934,7 @@ async function formatAsHtml(source, sections, config = {}) {
             highlighter,
             token.text,
             displayLang,
-            undefined,
-            fg
+            undefined
           )
         } catch {
           console.warn(
@@ -969,8 +965,7 @@ async function formatAsHtml(source, sections, config = {}) {
         highlighter,
         section.codeText,
         lang.name,
-        section.startLineNumber,
-        fg
+        section.startLineNumber
       )
     } catch {
       code = `<pre><code>${section.codeText}</code></pre>`
