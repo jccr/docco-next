@@ -15,7 +15,7 @@
     "Tony Mobily",
     "Seb Insua"
   ],
-  "version": "0.10.1",
+  "version": "0.10.2",
   "license": "GPL3",
   "repository": {
     "type": "git",
@@ -46,7 +46,8 @@
   },
   "main": "./docco.js",
   "bin": {
-    "docco": "./bin/docco"
+    "docco": "./bin/docco",
+    "docco-next": "./bin/docco"
   },
   "files": [
     "./bin",
