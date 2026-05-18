@@ -168,6 +168,7 @@ async function run(args = process.argv) {
       'choose a layout (default, parallel or classic)'
     )
     .option('-s, --shiki-theme [shikiTheme]', 'choose a shiki theme')
+    .option('--no-shiki-diff', 'disable shiki diff highlighting')
     .option('-o, --output [path]', 'output to a given folder')
     .option('-c, --css [file]', 'use a custom css file')
     .option('-p, --plugin [file]', 'use a custom plugin file')
@@ -766,45 +767,51 @@ function parse(source, lines, config = {}) {
  * * `docco-render` -- a custom transformer that ensures the output matches
  *   Docco's specific layout requirements (background, line numbers, line IDs).
  */
-async function codeToHtml(highlighter, code, language, lineNumber) {
+async function codeToHtml(
+  highlighter,
+  code,
+  language,
+  lineNumber,
+  config = {}
+) {
   if (!code.trim()) {
     return ''
   }
 
+  const transformers = []
+  if (config.shikiDiff !== false) {
+    transformers.push(transformerNotationDiff())
+  }
+
+  transformers.push({
+    name: 'docco-render',
+    pre(node) {
+      node.properties.style = 'background-color: transparent'
+    },
+    code(node) {
+      if (typeof lineNumber === 'number') {
+        node.properties.style = `--line-start-number: ${lineNumber};`
+      }
+    },
+    line(node, line) {
+      if (typeof lineNumber === 'number') {
+        node.properties.id = `L${lineNumber + line - 1}`
+      }
+      if (
+        node.children.length === 0 ||
+        (node.children.length === 1 &&
+          node.children[0].type === 'text' &&
+          node.children[0].value === '')
+      ) {
+        node.properties.class = (node.properties.class || '') + ' empty-line'
+      }
+    }
+  })
+
   return await highlighter.codeToHtml(code, {
     lang: language,
     theme: highlighter.getLoadedThemes()[0],
-    transformers: [
-      transformerNotationDiff(),
-      {
-        name: 'docco-render',
-        /* Ensure the background is transparent so the layout's CSS can handle it. */
-        pre(node) {
-          node.properties.style = 'background-color: transparent'
-        },
-        /* Inject the starting line number as a CSS variable for CSS counters. */
-        code(node) {
-          if (typeof lineNumber === 'number') {
-            node.properties.style = `--line-start-number: ${lineNumber};`
-          }
-        },
-        /* Add line IDs and handle empty lines for correct styling. */
-        line(node, line) {
-          if (typeof lineNumber === 'number') {
-            node.properties.id = `L${lineNumber + line - 1}`
-          }
-          if (
-            node.children.length === 0 ||
-            (node.children.length === 1 &&
-              node.children[0].type === 'text' &&
-              node.children[0].value === '')
-          ) {
-            node.properties.class =
-              (node.properties.class || '') + ' empty-line'
-          }
-        }
-      }
-    ]
+    transformers
   })
 }
 
@@ -934,7 +941,8 @@ async function formatAsHtml(source, sections, config = {}) {
             highlighter,
             token.text,
             displayLang,
-            undefined
+            undefined,
+            config
           )
         } catch {
           console.warn(
@@ -965,7 +973,8 @@ async function formatAsHtml(source, sections, config = {}) {
         highlighter,
         section.codeText,
         lang.name,
-        section.startLineNumber
+        section.startLineNumber,
+        config
       )
     } catch {
       code = `<pre><code>${section.codeText}</code></pre>`
