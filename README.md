@@ -863,6 +863,13 @@ the `shiki` option is set for Markdown, instructing it what to do when
 a code block is encountered: obviously, the `shiki` library
 will be used to format it.
 
+Since modern versions of Marked have moved many features to extensions,
+Docco Next manually enables the ones required to maintain its original
+functionality:
+
+* `gfmHeadingId` -- restores automatic generation of ID attributes for headings
+* `markedSmartypants` -- provides "smart" typographic punctuation (curly quotes, dashes, etc.)
+
 The second functtion, `makeHtmlBlob()`, actually creates the final HTML code
 using the formatted sections as a starting point. The conversion is done
 by using the EJS template provided, and passing it important variables:
@@ -920,8 +927,13 @@ async function formatAsHtml(source, sections, config = {}) {
   /* [Markdown](https://github.com/markedjs/marked) and Shiki */
   /* In modern marked, we use extensions for highlighting */
   const localMarked = new Marked()
+
+  /* We use the `gfmHeadingId` extension to restore automatic generation */
+  /* of ID attributes for headings, which is no longer part of core Marked */
   localMarked.use(gfmHeadingId())
 
+  /* If the `smartypants` option is set (which it is by default), we use */
+  /* the `markedSmartypants` extension to provide "smart" typographic punctuation */
   if (config.marked?.smartypants) {
     localMarked.use(markedSmartypants())
   }
