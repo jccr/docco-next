@@ -1,5 +1,5 @@
 {
-  "name": "docco-next",
+  "name": "@jccr/docco-next",
   "description": "Literate programming parser",
   "keywords": [
     "documentation",
