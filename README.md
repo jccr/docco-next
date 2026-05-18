@@ -82,21 +82,26 @@ The following libraries are required by Docco Next:
 In Javascript terms, this becomes:
 
 ```javascript
-const path = require('path')
-const ejs = require('ejs')
-const globby = require('globby')
-const fs = require('fs-extra')
-const marked = require('marked').marked
-const commander = require('commander')
-const shiki = require('shiki')
+import path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import ejs from 'ejs'
+import { globby } from 'globby'
+import fs from 'fs-extra'
+import { marked, Marked } from 'marked'
+import { gfmHeadingId } from 'marked-gfm-heading-id'
+import { program } from 'commander'
+import { createHighlighter } from 'shiki'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 ```
 
 On startup, the `version` variable is worked out straight from the `package.json`
-file, which is loaded using `require`
+file, which is loaded using `fs-extra`
 
 ```javascript
-const pkg = require('./package.json')
+const pkg = await fs.readJson(new URL('./package.json', import.meta.url))
 const version = pkg.version
 
 ```
@@ -106,7 +111,9 @@ Users can add more languages if desired. However, the list of default languages
 (and their relevant information) is stored in `layouts/languages.json`
 
 ```javascript
-const defaultLanguages = require('./layouts/languages.json')
+const defaultLanguages = await fs.readJson(
+  new URL('./layouts/languages.json', import.meta.url)
+)
 
 ```
 
@@ -114,7 +121,7 @@ By default, `marked` is run with very basic options (basically, just turning
 `smartypants` on). Users can add more options, but this is the starting point
 
 ```javascript
-const defaultMarkedOptions = { smartypants: true }
+const defaultMarkedOptions = {}
 
 ```
 
@@ -123,7 +130,7 @@ Configuration
 
 The `run` function is the entry point of the script when it's run by the
 command line (that is, it's not being used as a library).
-The `docco` command in `bin` simply runs `require('../docco.js').run()`.
+The `docco` command in `bin` simply runs `import { run } from '../docco.js'; run()`.
 
 The package `commander` will be used to parse command-line parameters.
 Commander will generate a configuration object based on how it's configured
@@ -142,8 +149,8 @@ out how the command is used.
 This is the full set of options available in Docco Next:
 
 ```javascript
-async function run (args = process.argv) {
-  commander
+async function run(args = process.argv) {
+  program
     .name('docco')
     .version(version)
     .usage('[options] files')
@@ -167,15 +174,17 @@ async function run (args = process.argv) {
       'set default file extension for all outputs'
     )
     .parse(args)
-  if (commander.args.length) {
-    const config = { ...commander.opts(), args: commander.args }
+
+  const options = program.opts()
+  if (program.args.length) {
+    const config = { ...options, args: program.args }
     await cmdLineNormalise(config)
-    configure(config)
+    await configure(config)
     await cmdLineSanityCheck(config)
 
     await documentAll(config)
   } else {
-    return console.log(commander.helpInformation())
+    return console.log(program.helpInformation())
   }
 }
 
@@ -212,14 +221,13 @@ reads:
 
 
 ```javascript
-async function cmdLineNormalise (config) {
+async function cmdLineNormalise(config) {
   if (config.languages) {
     if (!(await fileExists(config.languages))) {
       console.error('Languages file not found:', config.languages)
       process.exit(5)
     }
-    const languages = await fs.readFile(config.languages)
-    config.languages = JSON.parse(languages)
+    config.languages = await fs.readJson(config.languages)
   }
 
   if (config.plugin) {
@@ -227,7 +235,16 @@ async function cmdLineNormalise (config) {
       console.error('Plugin file not found:', config.plugin)
       process.exit(5)
     }
-    config.plugin = require(path.join(process.cwd(), config.plugin))
+```
+
+ESM import for plugin
+
+```javascript
+    const pluginPath = path.isAbsolute(config.plugin)
+      ? config.plugin
+      : path.resolve(process.cwd(), config.plugin)
+    const pluginModule = await import(pathToFileURL(pluginPath).href)
+    config.plugin = pluginModule.default || pluginModule
   } else {
     config.plugin = {}
   }
@@ -239,8 +256,7 @@ async function cmdLineNormalise (config) {
       console.error('Marked file not found:', config.marked)
       process.exit(6)
     }
-    const marked = await fs.readFile(config.marked)
-    config.marked = JSON.parse(marked)
+    config.marked = await fs.readJson(config.marked)
   }
 
   config.sources = await globby(config.args)
@@ -284,7 +300,7 @@ object that every call can use. This is why every single function that uses
 
 
 ```javascript
-function configure (config) {
+async function configure(config) {
   if (config.configured) return
   config.configured = true
 
@@ -311,7 +327,7 @@ function configure (config) {
     config.template = path.join(config.layout, 'docco.ejs')
   }
 
-  config.sources = config.sources || {}
+  config.sources = config.sources || []
 
   config.sources = config.sources.filter((source) => {
     const there = getLanguage(source, config)
@@ -344,7 +360,7 @@ specified in the `sources` array.
 
 
 ```javascript
-async function cmdLineSanityCheck (config) {
+async function cmdLineSanityCheck(config) {
   if (config.output && !(await dirExists(config.output))) {
     console.error('Output directory not found:', config.output)
     process.exit(1)
@@ -353,13 +369,6 @@ async function cmdLineSanityCheck (config) {
     console.error('Layout directory not found:', config.layout)
     process.exit(2)
   }
-
-  /*
-  if (config.css && !await fileExists(config.css)) {
-    console.error('CSS file not found:', config.css)
-    process.exit(3)
-  }
-  */
 
   if (config.sources) {
     for (const source of config.sources) {
@@ -408,7 +417,7 @@ Here is the code for those functions:
 
 
 ```javascript
-async function dirExists (dir) {
+async function dirExists(dir) {
   if (await fs.pathExists(dir)) {
     const stat = await fs.lstat(dir)
     return stat.isDirectory()
@@ -416,7 +425,7 @@ async function dirExists (dir) {
   return false
 }
 
-async function fileExists (dir) {
+async function fileExists(dir) {
   if (await fs.pathExists(dir)) {
     const stat = await fs.lstat(dir)
     return stat.isFile() || stat.isSymbolicLink()
@@ -424,7 +433,7 @@ async function fileExists (dir) {
   return false
 }
 
-function finalPath (source, config) {
+function finalPath(source, config) {
   const ext = config.outputExtension
   return path.join(
     config.output,
@@ -433,26 +442,31 @@ function finalPath (source, config) {
   )
 }
 
-async function copyAsset (file, type, config = {}) {
-  configure(config)
+async function copyAsset(file, type, config = {}) {
+  await configure(config)
   if (!file) return
   if (type === 'file' && !(await fileExists(file))) return
   if (type === 'directory' && !(await dirExists(file))) return
   return fs.copy(file, path.join(config.output, path.basename(file)))
 }
 
-async function write (source, path, contents) {
+async function write(source, path, contents) {
   console.log(`docco: ${source} -> ${path}`)
   await fs.outputFile(path, contents)
 }
 
-function properObjectWithKeys (o) {
-  return typeof o === 'object' && o !== null && Object.keys(o).length
+function properObjectWithKeys(o) {
+  return typeof o === 'object' && o !== null && Object.keys(o).length > 0
 }
 
-function getLanguage (source, config = {}) {
-  configure(config)
+function getLanguage(source, config = {}) {
+```
 
+Note: configure is async now if we wanted, but here it might have been called already
+But let's keep it simple.
+
+
+```javascript
   let codeExt, codeLang, lang
 
   const ext =
@@ -469,7 +483,7 @@ function getLanguage (source, config = {}) {
     }
   }
   /* Add commentMatcher */
-  lang.commentMatcher = RegExp(`^\\s*${lang.symbol}\\s?`)
+  lang.commentMatcher = new RegExp(`^\\s*${lang.symbol}\\s?`)
   /* Add commentFilter */
   /* Ignore [hashbangs](http://en.wikipedia.org/wiki/Shebang_%28Unix%29) and interpolations... */
   lang.commentFilter = /(^#![/]|^\s*#\{)/
@@ -492,8 +506,8 @@ run `configure(config)` to make sure that sane defaults are set.
 
 
 ```javascript
-async function documentAll (config = {}) {
-  configure(config)
+async function documentAll(config = {}) {
+  await configure(config)
   await fs.mkdirs(config.output)
 
   for (const source of config.sources) {
@@ -526,13 +540,12 @@ Here is the source code:
 
 
 ```javascript
-async function documentOne (source, config = {}) {
-  configure(config)
-  /* console.log(source) */
+async function documentOne(source, config = {}) {
+  await configure(config)
 
   const buffer = await fs.readFile(source)
   let lines = buffer.toString().split('\n')
-  const path = finalPath(source, config)
+  const outputPath = finalPath(source, config)
 
   config.lang = getLanguage(source, config)
   if (!config.lang) {
@@ -550,7 +563,7 @@ async function documentOne (source, config = {}) {
 
   const result = await formatAsHtml(source, sections, config)
 
-  await write(source, path, result)
+  await write(source, outputPath, result)
 }
 
 ```
@@ -595,9 +608,7 @@ contains Javascript
 
 
 ```javascript
-function litToCode (lines, config) {
-  configure(config)
-
+function litToCode(lines, config) {
   const lang = config.lang
   const retLines = []
   const markdownIndented = /^([ ]{4}|[ ]{0,3}\t)/
@@ -667,18 +678,17 @@ used: if there is anything in `codeText`, it means that the parser is
 in the middle of a code section, and therefore the empty line will be
 added to that code section.
 
+
 ```javascript
-function parse (source, lines, config = {}) {
+function parse(source, lines, config = {}) {
   let codeText, docsText
   const sections = []
-
-  configure(config)
 
   const lang = config.lang
   docsText = codeText = ''
   let lineNumber = 0
   let startLineNumber = 1
-  for (let line of lines) {
+  for (const line of lines) {
     lineNumber++
     /* If the line is not empty, it will either go in the code section */
     /* or the docs section, depending on whether the comment character was */
@@ -699,14 +709,15 @@ function parse (source, lines, config = {}) {
 
         /* Add the line to the documentation (docsText) taking out the leading */
         /* comment marker */
+        let cleanLine = line
         if (lang.symbol) {
-          line = line.replace(lang.commentMatcher, '')
+          cleanLine = line.replace(lang.commentMatcher, '')
         }
-        docsText += line + '\n'
+        docsText += cleanLine + '\n'
 
         /* If the line was a new markdown section (`===`,  `---` or `##`), */
         /* close off that section */
-        if (/^(---+|===+|#+.*)$/.test(line)) {
+        if (/^(---+|===+|#+.*)$/.test(cleanLine)) {
           sections.push({ docsText, codeText })
           docsText = codeText = ''
         }
@@ -734,7 +745,7 @@ function parse (source, lines, config = {}) {
   return sections
 }
 
-function codeToHtml (highlighter, code, language, lineNumber) {
+function codeToHtml(highlighter, code, language, lineNumber, fg) {
   const htmlEscapes = {
     '&': '&amp;',
     '<': '&lt;',
@@ -743,7 +754,7 @@ function codeToHtml (highlighter, code, language, lineNumber) {
     "'": '&#39;'
   }
 
-  function escapeHtml (html) {
+  function escapeHtml(html) {
     return html.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
   }
 
@@ -756,11 +767,10 @@ function codeToHtml (highlighter, code, language, lineNumber) {
   }
 
   /* See: https://github.com/shikijs/shiki/blob/f322a2b97470b25b26a4d8c1cf4892b059eb69db/packages/shiki/src/renderer.ts */
-  function renderToHtml (lines, options = {}) {
+  function renderToHtml(lines, options = {}) {
     const bg = options.bg || 'transparent'
-
     const hasLineNumbers = typeof options.lineNumber === 'number'
-    const lineNumber = options.lineNumber || 1
+    const startLine = options.lineNumber || 1
 
     const numberOfNonEmptyLines = lines.filter((l) => l.length > 0).length
     if (numberOfNonEmptyLines === 0) {
@@ -768,21 +778,20 @@ function codeToHtml (highlighter, code, language, lineNumber) {
     }
 
     let html = ''
-
     html += `<pre class="shiki" style="background-color: ${bg}">`
     if (options.langId) {
       html += `<div class="language-id">${options.langId}</div>`
     }
     html +=
       '<code ' +
-      (hasLineNumbers ? `style="--line-start-number: ${lineNumber};"` : '') +
+      (hasLineNumbers ? `style="--line-start-number: ${startLine};"` : '') +
       '>'
 
     lines.forEach((l, idx) => {
       const lineClasses = ['line', l.length > 0 ? undefined : 'empty-line']
         .filter(Boolean)
         .join(' ')
-      const currentLineId = `L${lineNumber + idx}`
+      const currentLineId = `L${startLine + idx}`
 
       html +=
         `<span class="${lineClasses}"` +
@@ -790,7 +799,7 @@ function codeToHtml (highlighter, code, language, lineNumber) {
         '>'
 
       l.forEach((token) => {
-        const cssDeclarations = [`color: ${token.color || options.fg}`]
+        const cssDeclarations = [`color: ${token.color || fg}`]
         if (token.fontStyle & FontStyle.Italic) {
           cssDeclarations.push('font-style: italic')
         }
@@ -812,9 +821,11 @@ function codeToHtml (highlighter, code, language, lineNumber) {
     return html
   }
 
-  const tokens = highlighter.codeToThemedTokens(code, language)
-
-  return renderToHtml(tokens, { lineNumber })
+  const tokens = highlighter.codeToTokens(code, {
+    lang: language,
+    theme: highlighter.getLoadedThemes()[0]
+  })
+  return renderToHtml(tokens.tokens, { lineNumber })
 }
 
 ```
@@ -840,8 +851,8 @@ each element has two properties, the leading `docsText` and the trailing
 If a plugin was
 specified, the following functions from the plugin may be run:
 
-* `plugin.beforeMarked` --  run before feeding the text to Marked. This 
-  allows users to extend Markdown as neeed.  
+* `plugin.beforeMarked` --  run before feeding the text to Marked. This
+  allows users to extend Markdown as neeed.
 * `plugin.afterHtml` -- run after the HTML has been generated
 * `plugin.finalPass` -- run once the whole file has been generated and
   it's ready to be written on the disk.
@@ -879,170 +890,183 @@ global variable.
 
 
 ```javascript
-async function formatAsHtml (source, sections, config = {}) {
-  configure(config)
+async function formatAsHtml(source, sections, config = {}) {
+  await configure(config)
 
   const lang = config.lang
+  const highlighter = await createHighlighter({
+    themes: [config.shikiTheme || 'min-light'],
+    langs: [
+      'javascript',
+      'typescript',
+      'python',
+      'ruby',
+      'c',
+      'cpp',
+      'java',
+      'go',
+      'rust',
+      'markdown',
+      'json',
+      'css',
+      'html'
+    ] // Add more as needed, or dynamic
+  })
 
-  /* Format sections, as HTML (from Markdown) or as highlighted code */
-  await formatSections(source, sections, config, lang)
+  const theme = highlighter.getTheme(config.shikiTheme || 'min-light')
+  const fg = theme.fg
 
-  /* return the HTML blob */
-  return makeHtmlBlob(source, sections, config, lang)
+  /* [Markdown](https://github.com/markedjs/marked) and Shiki */
+  /* In modern marked, we use extensions for highlighting */
+  const localMarked = new Marked()
+  localMarked.use(gfmHeadingId())
 
-  /* Format and highlight the various section of the code, using */
-  async function formatSections (source, sections, config = {}, lang) {
-    const highlighter = await shiki.getHighlighter({
-      theme: config.shikiTheme || 'min-light'
-    })
-
-    /* [Markdown](https://github.com/markedjs/marked) and Shiki */
-    /* Set options specified by the user, using to `smartypants: true` */
-    /* as a starting point */
-    marked.setOptions(config.marked)
-
-    /* Code might happen within the markdown documentation as well! If that */
-    /* is the case, it will highlight code either using the language specified */
-    /* within the Markdown codeblock, or the default language used for the processes */
-    /* file */
-    marked.setOptions({
-      highlight: function (code, language) {
-        if (!language) language = lang.name
-
-        try {
-          return codeToHtml(highlighter, code, language, undefined)
-        } catch (error) {
-          console.warn(
-            `${source}: language '${language}' not recognised, code block not highlighted`
-          )
-          return code
-        }
+  /* Custom renderer for code blocks in markdown */
+  /* Code might happen within the markdown documentation as well! If that */
+  /* is the case, it will highlight code either using the language specified */
+  /* within the Markdown codeblock, or the default language used for the processes */
+  /* file */
+  const renderer = {
+    code(token) {
+      const { text, lang: language } = token
+      const displayLang = language || lang.name
+      try {
+        return codeToHtml(highlighter, text, displayLang, undefined, fg)
+      } catch {
+        console.warn(
+          `${source}: language '${displayLang}' not recognised, code block not highlighted`
+        )
+        return `<pre><code>${text}</code></pre>`
       }
-    })
+    }
+  }
 
-    for (const section of sections) {
-      let code = codeToHtml(
+  localMarked.use({ renderer })
+  if (config.marked) {
+    localMarked.use(config.marked)
+  }
+
+  /* Format and highlight the various section of the code */
+  for (const section of sections) {
+    let code = ''
+    try {
+      code = codeToHtml(
         highlighter,
         section.codeText,
         lang.name,
-        section.startLineNumber
+        section.startLineNumber,
+        fg
       )
+    } catch {
+      code = `<pre><code>${section.codeText}</code></pre>`
+    }
 
-      code = code.replace(/\s+$/, '')
-      if (code !== '') section.codeHtml = `${code}`
-      else section.codeHtml = ''
-      if (config.plugin.beforeMarked) {
-        const newText = await config.plugin.beforeMarked(section.docsText)
-        section.docsText = newText
-      }
-      section.docsHtml = marked(section.docsText)
+    code = code.replace(/\s+$/, '')
+    if (code !== '') section.codeHtml = `${code}`
+    else section.codeHtml = ''
 
-      if (config.plugin.afterHtml) {
-        const newHtml = await config.plugin.afterHtml(section.docsHtml)
-        section.docsHtml = newHtml
-      }
+    let docsText = section.docsText
+    if (config.plugin.beforeMarked) {
+      const newText = await config.plugin.beforeMarked(docsText)
+      docsText = newText
+    }
+
+    section.docsHtml = await localMarked.parse(docsText)
+
+    if (config.plugin.afterHtml) {
+      const newHtml = await config.plugin.afterHtml(section.docsHtml)
+      section.docsHtml = newHtml
     }
   }
 
-  /* Once all of the code has finished highlighting, we can **write** the resulting */
-  /* documentation file by passing the completed HTML sections into the template, */
-  /* and rendering it to the specified output path. */
-  async function makeHtmlBlob (source, sections, config = {}) {
-    let first
+  /* return the HTML blob */
+  return makeHtmlBlob(source, sections, config, lang)
+}
 
-    async function _getTemplate (template) {
-      if (formatAsHtml._template) return formatAsHtml._template
+/* Once all of the code has finished highlighting, we can **write** the resulting */
+/* documentation file by passing the completed HTML sections into the template, */
+/* and rendering it to the specified output path. */
+async function makeHtmlBlob(source, sections, config, lang) {
+  let first
 
-      template = (await fs.readFile(template)).toString()
-      template = formatAsHtml._template = ejs.compile(template)
-      return template
-    }
-
-    function relativeToThisFile (file) {
-      const from = path.resolve(path.dirname(thisFile))
-      const to = path.resolve(path.dirname(file))
-      return path.join(path.relative(from, to), path.basename(file))
-    }
-
-    function includeText (source) {
-      return (s, silentFail) => {
-        let contents
-        let file
-        if (path.isAbsolute(s)) {
-          file = s
-        } else {
-          file = s
-        }
-        try {
-          contents = fs.readFileSync(file)
-          return contents
-        } catch (e) {
-          if (silentFail && e.code === 'ENOENT') return ''
-          if (e.code === 'ENOENT') {
-            console.error('Could not load included file:', file)
-          } else {
-            console.log(e)
-          }
-          process.exit(100)
-        }
-      }
-    }
-
-    const thisFile = finalPath(source, config)
-
-    /* Work out `title`, which will be either the first heading in the */
-    /* documentation, or (as a last resort) the file name */
-    const firstSection = sections.find((s) => {
-      return s.docsText.length > 0
-    })
-    let lexed
-    if (firstSection) {
-      lexed = marked.lexer(firstSection.docsText)
-      first = lexed[0]
-    }
-    const maybeTitle = first && first.type === 'heading' && first.depth === 1
-    const title = maybeTitle ? first.text : path.basename(source)
-    const firstSectionIsTitle = maybeTitle && lexed.length === 1
-
-    /* If the first section is the title, then get rid of it  */
-    /* since the title is already being displayed by the template anyway */
-    if (firstSectionIsTitle) {
-      sections.shift()
-    }
-
-    /* The `css` variable will be available in the template as a relative */
-    /* link to the CSS file */
-    const css = relativeToThisFile(
-      path.join(config.output, path.basename(config.css))
-    )
-
-    const template = await _getTemplate(config.template)
-
-    /* Make up the HTML based on the template */
-    let html = template({
-      lang,
-      includeText: includeText(source),
-      source,
-      sources: config.sources,
-      css,
-      firstSectionIsTitle,
-      title,
-      sections,
-      finalPath: (path) => finalPath(path, config),
-      relativeToThisFile,
-
-      hasTitle: firstSectionIsTitle, // compatibility to Docco's original API
-      destination: (path) => finalPath(path, config), // compatibility to Docco's original API
-      relative: relativeToThisFile // compatibility to Docco's original API
-    })
-
-    /* Run the final pass */
-    if (config.plugin.finalPass) {
-      html = await config.plugin.finalPass(html)
-    }
-
-    return html
+  async function _getTemplate(templatePath) {
+    if (formatAsHtml._template) return formatAsHtml._template
+    const templateContent = await fs.readFile(templatePath, 'utf8')
+    formatAsHtml._template = ejs.compile(templateContent)
+    return formatAsHtml._template
   }
+
+  const thisFile = finalPath(source, config)
+
+  function relativeToThisFile(file) {
+    const from = path.resolve(path.dirname(thisFile))
+    const to = path.resolve(path.dirname(file))
+    return path.join(path.relative(from, to), path.basename(file))
+  }
+
+  function includeText(s, silentFail) {
+    try {
+      return fs.readFileSync(s, 'utf8')
+    } catch (e) {
+      if (silentFail && e.code === 'ENOENT') return ''
+      if (e.code === 'ENOENT') {
+        console.error('Could not load included file:', s)
+      } else {
+        console.log(e)
+      }
+      process.exit(100)
+    }
+  }
+
+  /* Work out `title`, which will be either the first heading in the */
+  /* documentation, or (as a last resort) the file name */
+  const firstSection = sections.find((s) => s.docsText.length > 0)
+  let lexed
+  if (firstSection) {
+    lexed = marked.lexer(firstSection.docsText)
+    first = lexed[0]
+  }
+  const maybeTitle = first && first.type === 'heading' && first.depth === 1
+  const title = maybeTitle ? first.text : path.basename(source)
+  const firstSectionIsTitle = maybeTitle && lexed.length === 1
+
+  /* If the first section is the title, then get rid of it  */
+  /* since the title is already being displayed by the template anyway */
+  if (firstSectionIsTitle) {
+    sections.shift()
+  }
+
+  /* The `css` variable will be available in the template as a relative */
+  /* link to the CSS file */
+  const css = relativeToThisFile(
+    path.join(config.output, path.basename(config.css))
+  )
+
+  const template = await _getTemplate(config.template)
+
+  /* Make up the HTML based on the template */
+  let html = template({
+    lang,
+    includeText,
+    source,
+    sources: config.sources,
+    css,
+    firstSectionIsTitle,
+    title,
+    sections,
+    finalPath: (p) => finalPath(p, config),
+    relativeToThisFile,
+    hasTitle: firstSectionIsTitle,
+    destination: (p) => finalPath(p, config),
+    relative: relativeToThisFile
+  })
+
+  /* Run the final pass */
+  if (config.plugin.finalPass) {
+    html = await config.plugin.finalPass(html)
+  }
+
+  return html
 }
 
 ```
@@ -1054,7 +1078,7 @@ These functions are available once the module is `required()`. They are
 self contained and can be used to take Docco Next to different directions.
 
 ```javascript
-exports = module.exports = {
+export {
   copyAsset,
   run,
   parse,
@@ -1064,12 +1088,6 @@ exports = module.exports = {
   documentAll,
   version
 }
-
-/*
-`rm -rf dir2/*; node --inspect-brk bin/docco  -o dir2 ./doccoOrig.js sub/doccoOrig.js`
-`rm -rf dir2/*; node bin/docco  -l default -L /tmp/extras.json -o dir2 ./docco.js
-docco: ./docco.js -> dir2/docco.html
-*/
 
 ```
 

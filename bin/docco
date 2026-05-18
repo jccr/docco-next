@@ -1,2 +1,3 @@
 #!/usr/bin/env node
-require('../docco.js').run()
+import { run } from '../docco.js'
+run()
