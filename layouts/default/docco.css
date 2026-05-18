@@ -163,7 +163,8 @@ pre {
 }
 
 pre:hover {
-  box-shadow: 0 2px 25px -5px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 2px 25px -5px rgba(0, 0, 0, 0.1),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.3s ease-in-out;
   border: 1px solid #e7e7e7;
@@ -330,4 +331,33 @@ pre .hljs-chunk {
 
 pre .hljs-tex .hljs-formula {
   opacity: 0.5;
+}
+
+/* Shiki support */
+.shiki .line {
+  display: inline-block;
+  width: 100%;
+  position: relative;
+  padding-left: 1.5rem;
+  box-sizing: border-box;
+}
+.shiki .line.diff.add {
+  background-color: rgba(16, 185, 129, 0.14);
+}
+.shiki .line.diff.remove {
+  background-color: rgba(244, 63, 94, 0.14);
+}
+.shiki .line.diff::after {
+  position: absolute;
+  left: 0.5rem;
+  top: 0;
+  font-weight: bold;
+}
+.shiki .line.diff.add::after {
+  content: '+';
+  color: #10b981;
+}
+.shiki .line.diff.remove::after {
+  content: '-';
+  color: #f43f5e;
 }

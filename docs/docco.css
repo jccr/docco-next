@@ -35,6 +35,31 @@ code .line.empty-line::before {
   color: rgba(115, 138, 148, 0.2);
 }
 
+/* Shiki Diff Highlighting */
+code .line.diff {
+  position: relative;
+}
+code .line.diff.add {
+  background-color: rgba(16, 185, 129, 0.14);
+}
+code .line.diff.remove {
+  background-color: rgba(244, 63, 94, 0.14);
+}
+code .line.diff::after {
+  position: absolute;
+  left: 1.5rem;
+  top: 0;
+  font-weight: bold;
+}
+code .line.diff.add::after {
+  content: '+';
+  color: #10b981;
+}
+code .line.diff.remove::after {
+  content: '-';
+  color: #f43f5e;
+}
+
 .annotation pre.shiki code {
   counter-reset: unset;
   counter-increment: unset;
@@ -51,7 +76,8 @@ code .line.empty-line::before {
 @font-face {
   font-family: 'aller-light';
   src: url('public/fonts/aller-light.eot');
-  src: url('public/fonts/aller-light.eot?#iefix') format('embedded-opentype'),
+  src:
+    url('public/fonts/aller-light.eot?#iefix') format('embedded-opentype'),
     url('public/fonts/aller-light.woff') format('woff'),
     url('public/fonts/aller-light.ttf') format('truetype');
   font-weight: normal;
@@ -61,7 +87,8 @@ code .line.empty-line::before {
 @font-face {
   font-family: 'aller-bold';
   src: url('public/fonts/aller-bold.eot');
-  src: url('public/fonts/aller-bold.eot?#iefix') format('embedded-opentype'),
+  src:
+    url('public/fonts/aller-bold.eot?#iefix') format('embedded-opentype'),
     url('public/fonts/aller-bold.woff') format('woff'),
     url('public/fonts/aller-bold.ttf') format('truetype');
   font-weight: normal;
@@ -71,7 +98,8 @@ code .line.empty-line::before {
 @font-face {
   font-family: 'roboto-black';
   src: url('public/fonts/roboto-black.eot');
-  src: url('public/fonts/roboto-black.eot?#iefix') format('embedded-opentype'),
+  src:
+    url('public/fonts/roboto-black.eot?#iefix') format('embedded-opentype'),
     url('public/fonts/roboto-black.woff') format('woff'),
     url('public/fonts/roboto-black.ttf') format('truetype');
   font-weight: normal;
@@ -156,7 +184,7 @@ code {
   margin: 0;
   padding: 0;
 }
-/* 
+/*
 .annotation pre {
   display: block;
   margin: 0;

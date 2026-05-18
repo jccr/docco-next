@@ -92,7 +92,14 @@ import { gfmHeadingId } from 'marked-gfm-heading-id'
 import { markedSmartypants } from 'marked-smartypants'
 import { program } from 'commander'
 import { createHighlighter } from 'shiki'
+import { transformerNotationDiff } from '@shikijs/transformers'
 
+```
+
+Since ESM doesn't provide `__dirname` and `__filename` by default,
+we recreate them using `import.meta.url`.
+
+```javascript
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -161,6 +168,7 @@ async function run(args = process.argv) {
       'choose a layout (default, parallel or classic)'
     )
     .option('-s, --shiki-theme [shikiTheme]', 'choose a shiki theme')
+    .option('--no-shiki-diff', 'disable shiki diff highlighting')
     .option('-o, --output [path]', 'output to a given folder')
     .option('-c, --css [file]', 'use a custom css file')
     .option('-p, --plugin [file]', 'use a custom plugin file')
@@ -236,11 +244,11 @@ async function cmdLineNormalise(config) {
       console.error('Plugin file not found:', config.plugin)
       process.exit(5)
     }
-```
-
-ESM import for plugin
-
-```javascript
+    /**
+     * Plugins are now loaded using dynamic `import()`.
+     * We use `pathToFileURL` to ensure the path is correctly formatted
+     * as a file URL, which is required for dynamic imports in ESM.
+     */
     const pluginPath = path.isAbsolute(config.plugin)
       ? config.plugin
       : path.resolve(process.cwd(), config.plugin)
@@ -746,87 +754,68 @@ function parse(source, lines, config = {}) {
   return sections
 }
 
-function codeToHtml(highlighter, code, language, lineNumber, fg) {
-  const htmlEscapes = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
+/**
+ * ## codeToHtml()
+ *
+ * This function uses [Shiki](https://shiki.style/) to highlight source code.
+ * It's an asynchronous function that returns the highlighted HTML.
+ *
+ * It utilizes several Shiki "transformers" to achieve the desired output:
+ *
+ * * `transformerNotationDiff()` -- parses `// [!code ++]` and `// [!code --]`
+ *   comments to highlight added/removed lines. This can be disabled by
+ *   setting `config.shikiDiff` to `false` (via the `--no-shiki-diff` CLI flag).
+ * * `docco-render` -- a custom transformer that ensures the output matches
+ *   Docco's specific layout requirements (background, line numbers, line IDs).
+ *
+ * The `config` parameter is used to check for the `shikiDiff` preference.
+ */
+async function codeToHtml(
+  highlighter,
+  code,
+  language,
+  lineNumber,
+  config = {}
+) {
+  if (!code.trim()) {
+    return ''
   }
 
-  function escapeHtml(html) {
-    return html.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
+  const transformers = []
+  if (config.shikiDiff !== false) {
+    transformers.push(transformerNotationDiff())
   }
 
-  const FontStyle = {
-    NotSet: -1,
-    None: 0,
-    Italic: 1,
-    Bold: 2,
-    Underline: 4
-  }
-
-  /* See: https://github.com/shikijs/shiki/blob/f322a2b97470b25b26a4d8c1cf4892b059eb69db/packages/shiki/src/renderer.ts */
-  function renderToHtml(lines, options = {}) {
-    const bg = options.bg || 'transparent'
-    const hasLineNumbers = typeof options.lineNumber === 'number'
-    const startLine = options.lineNumber || 1
-
-    const numberOfNonEmptyLines = lines.filter((l) => l.length > 0).length
-    if (numberOfNonEmptyLines === 0) {
-      return ''
+  transformers.push({
+    name: 'docco-render',
+    pre(node) {
+      node.properties.style = 'background-color: transparent'
+    },
+    code(node) {
+      if (typeof lineNumber === 'number') {
+        node.properties.style = `--line-start-number: ${lineNumber};`
+      }
+    },
+    line(node, line) {
+      if (typeof lineNumber === 'number') {
+        node.properties.id = `L${lineNumber + line - 1}`
+      }
+      if (
+        node.children.length === 0 ||
+        (node.children.length === 1 &&
+          node.children[0].type === 'text' &&
+          node.children[0].value === '')
+      ) {
+        node.properties.class = (node.properties.class || '') + ' empty-line'
+      }
     }
-
-    let html = ''
-    html += `<pre class="shiki" style="background-color: ${bg}">`
-    if (options.langId) {
-      html += `<div class="language-id">${options.langId}</div>`
-    }
-    html +=
-      '<code ' +
-      (hasLineNumbers ? `style="--line-start-number: ${startLine};"` : '') +
-      '>'
-
-    lines.forEach((l, idx) => {
-      const lineClasses = ['line', l.length > 0 ? undefined : 'empty-line']
-        .filter(Boolean)
-        .join(' ')
-      const currentLineId = `L${startLine + idx}`
-
-      html +=
-        `<span class="${lineClasses}"` +
-        (hasLineNumbers ? ` id="${currentLineId}"` : '') +
-        '>'
-
-      l.forEach((token) => {
-        const cssDeclarations = [`color: ${token.color || fg}`]
-        if (token.fontStyle & FontStyle.Italic) {
-          cssDeclarations.push('font-style: italic')
-        }
-        if (token.fontStyle & FontStyle.Bold) {
-          cssDeclarations.push('font-weight: bold')
-        }
-        if (token.fontStyle & FontStyle.Underline) {
-          cssDeclarations.push('text-decoration: underline')
-        }
-        html += `<span style="${cssDeclarations.join('; ')}">${escapeHtml(
-          token.content
-        )}</span>`
-      })
-      html += '</span>\n'
-    })
-    html = html.replace(/\n*$/, '') /* Get rid of final new lines */
-    html += '</code></pre>'
-
-    return html
-  }
-
-  const tokens = highlighter.codeToTokens(code, {
-    lang: language,
-    theme: highlighter.getLoadedThemes()[0]
   })
-  return renderToHtml(tokens.tokens, { lineNumber })
+
+  return await highlighter.codeToHtml(code, {
+    lang: language,
+    theme: highlighter.getLoadedThemes()[0],
+    transformers
+  })
 }
 
 ```
@@ -921,9 +910,6 @@ async function formatAsHtml(source, sections, config = {}) {
     ] // Add more as needed, or dynamic
   })
 
-  const theme = highlighter.getTheme(config.shikiTheme || 'min-light')
-  const fg = theme.fg
-
   /* [Markdown](https://github.com/markedjs/marked) and Shiki */
   /* In modern marked, we use extensions for highlighting */
   const localMarked = new Marked()
@@ -938,27 +924,46 @@ async function formatAsHtml(source, sections, config = {}) {
     localMarked.use(markedSmartypants())
   }
 
-  /* Custom renderer for code blocks in markdown */
+  /* Custom renderer and async token walker for code blocks in markdown */
   /* Code might happen within the markdown documentation as well! If that */
   /* is the case, it will highlight code either using the language specified */
   /* within the Markdown codeblock, or the default language used for the processes */
-  /* file */
-  const renderer = {
-    code(token) {
-      const { text, lang: language } = token
-      const displayLang = language || lang.name
-      try {
-        return codeToHtml(highlighter, text, displayLang, undefined, fg)
-      } catch {
-        console.warn(
-          `${source}: language '${displayLang}' not recognised, code block not highlighted`
-        )
-        return `<pre><code>${text}</code></pre>`
+  /* file. */
+  /**
+   * Since Shiki's highlighting is asynchronous, we use Marked's `walkTokens`
+   * and `async: true` mode. This ensures all code blocks are highlighted
+   * before the final HTML rendering starts, preventing `[object Promise]`
+   * from appearing in the output.
+   */
+  localMarked.use({
+    async walkTokens(token) {
+      if (token.type === 'code') {
+        const displayLang = token.lang || lang.name
+        try {
+          token.renderedCode = await codeToHtml(
+            highlighter,
+            token.text,
+            displayLang,
+            undefined,
+            config
+          )
+        } catch {
+          console.warn(
+            `${source}: language '${displayLang}' not recognised, code block not highlighted`
+          )
+          token.renderedCode = `<pre><code>${token.text}</code></pre>`
+        }
       }
-    }
-  }
+    },
+    renderer: {
+      code(token) {
+        /* The renderer returns the pre-rendered HTML stored on the token. */
+        return token.renderedCode
+      }
+    },
+    async: true
+  })
 
-  localMarked.use({ renderer })
   if (config.marked) {
     localMarked.use(config.marked)
   }
@@ -967,12 +972,12 @@ async function formatAsHtml(source, sections, config = {}) {
   for (const section of sections) {
     let code = ''
     try {
-      code = codeToHtml(
+      code = await codeToHtml(
         highlighter,
         section.codeText,
         lang.name,
         section.startLineNumber,
-        fg
+        config
       )
     } catch {
       code = `<pre><code>${section.codeText}</code></pre>`
