@@ -763,9 +763,12 @@ function parse(source, lines, config = {}) {
  * It utilizes several Shiki "transformers" to achieve the desired output:
  *
  * * `transformerNotationDiff()` -- parses `// [!code ++]` and `// [!code --]`
- *   comments to highlight added/removed lines.
+ *   comments to highlight added/removed lines. This can be disabled by
+ *   setting `config.shikiDiff` to `false` (via the `--no-shiki-diff` CLI flag).
  * * `docco-render` -- a custom transformer that ensures the output matches
  *   Docco's specific layout requirements (background, line numbers, line IDs).
+ *
+ * The `config` parameter is used to check for the `shikiDiff` preference.
  */
 async function codeToHtml(
   highlighter,
