@@ -47,5 +47,8 @@
   "main": "./docco.js",
   "bin": {
     "docco": "./bin/docco"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
