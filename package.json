@@ -32,6 +32,7 @@
     "globby": "^14.0.2",
     "marked": "^15.0.0",
     "marked-gfm-heading-id": "^4.1.4",
+    "marked-smartypants": "^1.1.12",
     "shiki": "^1.22.2"
   },
   "devDependencies": {

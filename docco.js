@@ -82,6 +82,7 @@ import { globby } from 'globby'
 import fs from 'fs-extra'
 import { marked, Marked } from 'marked'
 import { gfmHeadingId } from 'marked-gfm-heading-id'
+import { markedSmartypants } from 'marked-smartypants'
 import { program } from 'commander'
 import { createHighlighter } from 'shiki'
 
@@ -102,7 +103,7 @@ const defaultLanguages = await fs.readJson(
 
 // By default, `marked` is run with very basic options (basically, just turning
 // `smartypants` on). Users can add more options, but this is the starting point
-const defaultMarkedOptions = {}
+const defaultMarkedOptions = { smartypants: true }
 
 // Configuration
 // ---------------
@@ -788,6 +789,13 @@ function codeToHtml(highlighter, code, language, lineNumber, fg) {
 // a code block is encountered: obviously, the `shiki` library
 // will be used to format it.
 //
+// Since modern versions of Marked have moved many features to extensions,
+// Docco Next manually enables the ones required to maintain its original
+// functionality:
+//
+// * `gfmHeadingId` -- restores automatic generation of ID attributes for headings
+// * `markedSmartypants` -- provides "smart" typographic punctuation (curly quotes, dashes, etc.)
+//
 // The second functtion, `makeHtmlBlob()`, actually creates the final HTML code
 // using the formatted sections as a starting point. The conversion is done
 // by using the EJS template provided, and passing it important variables:
@@ -843,7 +851,16 @@ async function formatAsHtml(source, sections, config = {}) {
   /* [Markdown](https://github.com/markedjs/marked) and Shiki */
   /* In modern marked, we use extensions for highlighting */
   const localMarked = new Marked()
+
+  /* We use the `gfmHeadingId` extension to restore automatic generation */
+  /* of ID attributes for headings, which is no longer part of core Marked */
   localMarked.use(gfmHeadingId())
+
+  /* If the `smartypants` option is set (which it is by default), we use */
+  /* the `markedSmartypants` extension to provide "smart" typographic punctuation */
+  if (config.marked?.smartypants) {
+    localMarked.use(markedSmartypants())
+  }
 
   /* Custom renderer for code blocks in markdown */
   /* Code might happen within the markdown documentation as well! If that */
