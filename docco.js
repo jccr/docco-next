@@ -137,7 +137,7 @@ async function run(args = process.argv) {
     .option('-L, --languages [file]', 'use a custom languages.json')
     .option(
       '-l, --layout [name]',
-      'choose a layout (default, parallel or classic)'
+      'choose a layout (default, parallel, parallel-dark or classic)'
     )
     .option('-s, --shiki-theme [shikiTheme]', 'choose a shiki theme')
     .option('--no-shiki-diff', 'disable shiki diff highlighting')
@@ -286,7 +286,16 @@ async function configure(config) {
     : defaultMarkedOptions
 
   config.layout = config.layout || 'parallel'
-  if (config.layout.match(/^[a-zA-Z0-9]+$/)) {
+
+  if (!config.shikiTheme && config.layout === 'parallel-dark') {
+    config.shikiTheme = 'ayu-dark'
+  }
+
+  if (!config.shikiTheme) {
+    config.shikiTheme = 'github-light'
+  }
+
+  if (config.layout.match(/^[a-zA-Z0-9-]+$/)) {
     config.layout = path.join(__dirname, 'layouts', config.layout)
   }
 
@@ -816,7 +825,7 @@ async function formatAsHtml(source, sections, config = {}) {
 
   const lang = config.lang
   const highlighter = await createHighlighter({
-    themes: [config.shikiTheme || 'min-light'],
+    themes: [config.shikiTheme],
     langs: [
       'javascript',
       'typescript',
