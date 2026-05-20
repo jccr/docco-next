@@ -6,11 +6,25 @@
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
   <link rel="stylesheet" media="all" href="../docco.css" />
+  <script>
+    (function() {
+      var stored = localStorage.getItem('docco-theme');
+      var theme = (stored === 'light' || stored === 'dark')
+        ? stored
+        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
 </head>
 <body>
+  <div id="controls">
+    <div id="theme-toggle">
+      <button id="theme-btn">Auto</button>
+    </div>
+    
+  </div>
   <div id="container">
     <div id="background"></div>
-    
     <ul class="sections">
         
         
@@ -27,7 +41,7 @@ and <code>// [!code --]</code> to mark a line as removed (red).</p>
 
             </div>
             
-            <div class="content"><pre class="shiki min-light" style="background-color: transparent" tabindex="0"><code style="--line-start-number: 7;"><span class="line" id="L7"><span style="color:#D32F2F">function</span><span style="color:#6F42C1"> greet</span><span style="color:#24292EFF">(name) {</span></span>
+            <div class="content"><pre class="shiki shiki-themes github-light ayu-dark" style="background-color: transparent" tabindex="0"><code style="--line-start-number: 7;"><span class="line" id="L7"><span style="color:#D73A49;--shiki-dark:#FF8F40">function</span><span style="color:#6F42C1;--shiki-dark:#FFB454"> greet</span><span style="color:#24292E;--shiki-dark:#BFBDB6">(</span><span style="color:#E36209;--shiki-dark:#D2A6FF">name</span><span style="color:#24292E;--shiki-dark:#BFBDB6">) {</span></span>
 <span class="line empty-line" id="L8"></span></code></pre></div>
             
         </li>
@@ -43,9 +57,9 @@ and <code>// [!code --]</code> to mark a line as removed (red).</p>
 
             </div>
             
-            <div class="content"><pre class="shiki min-light has-diff" style="background-color: transparent" tabindex="0"><code style="--line-start-number: 9;"><span class="line diff remove" id="L9"><span style="color:#1976D2">  console</span><span style="color:#6F42C1">.log</span><span style="color:#24292EFF">(</span><span style="color:#22863A">'Hi '</span><span style="color:#D32F2F"> +</span><span style="color:#24292EFF"> name) </span></span>
-<span class="line diff add" id="L10"><span style="color:#1976D2">  console</span><span style="color:#6F42C1">.log</span><span style="color:#24292EFF">(</span><span style="color:#22863A">`Hello, </span><span style="color:#D32F2F">${</span><span style="color:#24292EFF">name</span><span style="color:#D32F2F">}</span><span style="color:#22863A">!`</span><span style="color:#24292EFF">) </span></span>
-<span class="line" id="L11"><span style="color:#24292EFF">}</span></span>
+            <div class="content"><pre class="shiki shiki-themes github-light ayu-dark has-diff" style="background-color: transparent" tabindex="0"><code style="--line-start-number: 9;"><span class="line diff remove" id="L9"><span style="color:#24292E;--shiki-dark:#BFBDB6">  console</span><span style="color:#24292E;--shiki-dark:#F29668">.</span><span style="color:#6F42C1;--shiki-dark:#FFB454">log</span><span style="color:#24292E;--shiki-dark:#BFBDB6">(</span><span style="color:#032F62;--shiki-dark:#AAD94C">'Hi '</span><span style="color:#D73A49;--shiki-dark:#F29668"> +</span><span style="color:#24292E;--shiki-dark:#BFBDB6"> name) </span></span>
+<span class="line diff add" id="L10"><span style="color:#24292E;--shiki-dark:#BFBDB6">  console</span><span style="color:#24292E;--shiki-dark:#F29668">.</span><span style="color:#6F42C1;--shiki-dark:#FFB454">log</span><span style="color:#24292E;--shiki-dark:#BFBDB6">(</span><span style="color:#032F62;--shiki-dark:#AAD94C">`Hello, </span><span style="color:#032F62;--shiki-dark:#FF8F40">${</span><span style="color:#24292E;--shiki-dark:#BFBDB6">name</span><span style="color:#032F62;--shiki-dark:#FF8F40">}</span><span style="color:#032F62;--shiki-dark:#AAD94C">!`</span><span style="color:#24292E;--shiki-dark:#BFBDB6">) </span></span>
+<span class="line" id="L11"><span style="color:#24292E;--shiki-dark:#BFBDB6">}</span></span>
 <span class="line empty-line" id="L12"></span>
 <span class="line empty-line" id="L13"></span></code></pre></div>
             
@@ -62,7 +76,7 @@ and <code>// [!code --]</code> to mark a line as removed (red).</p>
 
             </div>
             
-            <div class="content"><pre class="shiki min-light" style="background-color: transparent" tabindex="0"><code style="--line-start-number: 14;"><span class="line" id="L14"><span style="color:#6F42C1">greet</span><span style="color:#24292EFF">(</span><span style="color:#22863A">'World'</span><span style="color:#24292EFF">)</span></span>
+            <div class="content"><pre class="shiki shiki-themes github-light ayu-dark" style="background-color: transparent" tabindex="0"><code style="--line-start-number: 14;"><span class="line" id="L14"><span style="color:#6F42C1;--shiki-dark:#FFB454">greet</span><span style="color:#24292E;--shiki-dark:#BFBDB6">(</span><span style="color:#032F62;--shiki-dark:#AAD94C">'World'</span><span style="color:#24292E;--shiki-dark:#BFBDB6">)</span></span>
 <span class="line empty-line" id="L15"></span>
 <span class="line empty-line" id="L16"></span></code></pre></div>
             
@@ -70,5 +84,48 @@ and <code>// [!code --]</code> to mark a line as removed (red).</p>
         
     </ul>
   </div>
+  <script>
+    (function() {
+      var mql = window.matchMedia('(prefers-color-scheme: dark)');
+      var prefs = ['system', 'light', 'dark'];
+      var labels = { system: 'Auto', light: 'Light', dark: 'Dark' };
+
+      function getStored() {
+        return localStorage.getItem('docco-theme') || 'system';
+      }
+
+      function applyTheme(pref) {
+        var isDark = pref === 'dark' || (pref === 'system' && mql.matches);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      }
+
+      var jumpTo = document.getElementById('jump_to');
+      if (jumpTo) {
+        jumpTo.querySelectorAll('a.large, a.small').forEach(function(trigger) {
+          trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            jumpTo.classList.toggle('is-open');
+          });
+        });
+        document.addEventListener('click', function(e) {
+          if (!jumpTo.contains(e.target)) jumpTo.classList.remove('is-open');
+        });
+      }
+
+      var btn = document.getElementById('theme-btn');
+      btn.textContent = labels[getStored()];
+
+      btn.addEventListener('click', function() {
+        var next = prefs[(prefs.indexOf(getStored()) + 1) % prefs.length];
+        localStorage.setItem('docco-theme', next);
+        applyTheme(next);
+        btn.textContent = labels[next];
+      });
+
+      mql.addEventListener('change', function() {
+        if (getStored() === 'system') applyTheme('system');
+      });
+    })();
+  </script>
 </body>
 </html>
