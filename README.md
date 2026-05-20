@@ -165,9 +165,13 @@ async function run(args = process.argv) {
     .option('-L, --languages [file]', 'use a custom languages.json')
     .option(
       '-l, --layout [name]',
-      'choose a layout (default, parallel, parallel-dark or classic)'
+      'choose a layout (default, parallel or classic)'
     )
-    .option('-s, --shiki-theme [shikiTheme]', 'choose a shiki theme')
+    .option('-s, --shiki-theme [shikiTheme]', 'choose a light shiki theme')
+    .option(
+      '--shiki-theme-dark [shikiThemeDark]',
+      'choose a dark shiki theme for dual-theme mode'
+    )
     .option('--no-shiki-diff', 'disable shiki diff highlighting')
     .option('-o, --output [path]', 'output to a given folder')
     .option('-c, --css [file]', 'use a custom css file')
@@ -325,11 +329,10 @@ async function configure(config) {
 
   config.layout = config.layout || 'parallel'
 
-  if (!config.shikiTheme && config.layout === 'parallel-dark') {
-    config.shikiTheme = 'ayu-dark'
-  }
-
-  if (!config.shikiTheme) {
+  if (config.layout === 'parallel') {
+    if (!config.shikiTheme) config.shikiTheme = 'github-light'
+    if (!config.shikiThemeDark) config.shikiThemeDark = 'ayu-dark'
+  } else if (!config.shikiTheme) {
     config.shikiTheme = 'github-light'
   }
 
@@ -820,9 +823,13 @@ async function codeToHtml(
     }
   })
 
+  const themeOption = config.shikiThemeDark
+    ? { themes: { light: config.shikiTheme, dark: config.shikiThemeDark } }
+    : { theme: highlighter.getLoadedThemes()[0] }
+
   return await highlighter.codeToHtml(code, {
     lang: language,
-    theme: highlighter.getLoadedThemes()[0],
+    ...themeOption,
     transformers
   })
 }
@@ -901,7 +908,9 @@ async function formatAsHtml(source, sections, config = {}) {
 
   const lang = config.lang
   const highlighter = await createHighlighter({
-    themes: [config.shikiTheme],
+    themes: config.shikiThemeDark
+      ? [config.shikiTheme, config.shikiThemeDark]
+      : [config.shikiTheme],
     langs: [
       'javascript',
       'typescript',

@@ -6,16 +6,27 @@
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
   <link rel="stylesheet" media="all" href="<%- css %>" />
+  <script>
+    (function() {
+      var stored = localStorage.getItem('docco-theme');
+      var theme = (stored === 'light' || stored === 'dark')
+        ? stored
+        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
 </head>
 <body>
-  <div id="container">
-    <div id="background"></div>
+  <div id="controls">
+    <div id="theme-toggle">
+      <button id="theme-btn">Auto</button>
+    </div>
     <% if (sources.length > 1) { %>
-      <ul id="jump_to">
-        <li>
-          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
-          <a class="small" href="javascript:void(0);">+</a>
-          <div id="jump_wrapper">
+    <ul id="jump_to">
+      <li>
+        <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+        <a class="small" href="javascript:void(0);">+</a>
+        <div id="jump_wrapper">
           <div id="jump_page_wrapper">
             <div id="jump_page">
               <% for (var i=0, l=sources.length; i<l; i++) { %>
@@ -26,9 +37,13 @@
               <% } %>
             </div>
           </div>
-        </li>
-      </ul>
+        </div>
+      </li>
+    </ul>
     <% } %>
+  </div>
+  <div id="container">
+    <div id="background"></div>
     <ul class="sections">
         <% if (!hasTitle) { %>
           <li id="title">
@@ -54,5 +69,48 @@
         <% } %>
     </ul>
   </div>
+  <script>
+    (function() {
+      var mql = window.matchMedia('(prefers-color-scheme: dark)');
+      var prefs = ['system', 'light', 'dark'];
+      var labels = { system: 'Auto', light: 'Light', dark: 'Dark' };
+
+      function getStored() {
+        return localStorage.getItem('docco-theme') || 'system';
+      }
+
+      function applyTheme(pref) {
+        var isDark = pref === 'dark' || (pref === 'system' && mql.matches);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      }
+
+      var jumpTo = document.getElementById('jump_to');
+      if (jumpTo) {
+        jumpTo.querySelectorAll('a.large, a.small').forEach(function(trigger) {
+          trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            jumpTo.classList.toggle('is-open');
+          });
+        });
+        document.addEventListener('click', function(e) {
+          if (!jumpTo.contains(e.target)) jumpTo.classList.remove('is-open');
+        });
+      }
+
+      var btn = document.getElementById('theme-btn');
+      btn.textContent = labels[getStored()];
+
+      btn.addEventListener('click', function() {
+        var next = prefs[(prefs.indexOf(getStored()) + 1) % prefs.length];
+        localStorage.setItem('docco-theme', next);
+        applyTheme(next);
+        btn.textContent = labels[next];
+      });
+
+      mql.addEventListener('change', function() {
+        if (getStored() === 'system') applyTheme('system');
+      });
+    })();
+  </script>
 </body>
 </html>
