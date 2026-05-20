@@ -157,7 +157,6 @@ h6 {
   line-height: 1em;
   font-weight: normal;
   font-family: 'roboto-black';
-  text-transform: uppercase;
   margin: 30px 0 15px 0;
 }
 
@@ -178,8 +177,8 @@ hr {
 pre,
 tt,
 code {
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 0.95em;
+  line-height: 1.26em;
   font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
   margin: 0;
   padding: 0;
@@ -209,8 +208,8 @@ blockquote {
 }
 .sections blockquote p {
   font-family: Menlo, Consolas, Monaco, monospace;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 0.95em;
+  line-height: 1.26em;
   color: #999;
   margin: 10px 0 0;
   white-space: pre-wrap;
@@ -369,7 +368,7 @@ ul.sections > li > div {
   pre,
   tt,
   code {
-    line-height: 18px;
+    line-height: 1.33em;
   }
   p,
   ul,
@@ -378,15 +377,14 @@ ul.sections > li > div {
   }
 
   #jump_to {
+    text-transform: uppercase;
     padding: 5px 10px;
   }
   #jump_wrapper {
     padding: 0;
   }
-  #jump_to,
   #jump_page {
-    font: 10px Arial;
-    text-transform: uppercase;
+    font-size: 0.7em;
   }
   #jump_page .source {
     padding: 5px 10px;
